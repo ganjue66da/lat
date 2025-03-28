@@ -3766,7 +3766,7 @@ target_ulong page_find_range_empty(target_ulong min, target_ulong max,
         if (p == NULL) {
             /* Found! */
             if (start == mmap_next_start) {
-                mmap_next_start = min + len;
+                mmap_next_start = min;
             }
             return min;
         }
