@@ -29,7 +29,7 @@ static TranslationBlock *get_next_tb(TranslationBlock *tb, CPUState *cpu,
 {
 
     TranslationBlock *n;
-#ifdef CONFIG_LATX_AOT2
+#ifdef CONFIG_LATX_AOT
     if (!in_pre_translate) {
         n = tb_lookup(cpu, tb->next_86_pc, cs_base, flags, cflags);
     } else {

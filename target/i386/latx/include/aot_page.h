@@ -31,7 +31,7 @@ typedef struct PageDesc {
     /* list of TBs intersecting this ram page */
     uintptr_t first_tb;
 #endif
-#ifdef CONFIG_LATX_AOT2
+#ifdef CONFIG_LATX_AOT
     uint8_t page_state;
 #endif
 } PageDesc;

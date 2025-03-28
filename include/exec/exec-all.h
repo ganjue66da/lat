@@ -762,10 +762,6 @@ void tb_phys_invalidate(TranslationBlock *tb, tb_page_addr_t page_addr);
 TranslationBlock *tb_htable_lookup(CPUState *cpu, target_ulong pc,
                                    target_ulong cs_base, uint32_t flags,
                                    uint32_t cflags);
-#ifdef CONFIG_LATX_AOT
-TranslationBlock *tb_smc_hash_table_lookup(target_ulong pc);
-void tb_smc_hash_table_insert(target_ulong pc, TranslationBlock *tb);
-#endif
 void tb_eflag_eliminate(TranslationBlock *tb, int n);
 void tb_eflag_recover(TranslationBlock *tb, int n);
 #ifdef CONFIG_LATX_XCOMISX_OPT
@@ -817,9 +813,7 @@ struct MemoryRegionSection *iotlb_to_section(CPUState *cpu,
                                              hwaddr index, MemTxAttrs attrs);
 #endif
 
-#ifdef CONFIG_LATX_AOT
 void mmap_trylock(void);
-#endif
 
 /**
  * get_page_addr_code_hostp()

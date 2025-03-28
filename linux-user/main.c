@@ -1398,15 +1398,6 @@ int main(int argc, char **argv, char **envp)
     cpu->opaque = ts;
     task_settid(ts);
 #ifdef CONFIG_LATX_AOT
-#ifndef CONFIG_LATX_AOT2
-    if (access(aot_file_path, R_OK) < 0) {
-        option_load_aot = 0;
-    } else {
-        option_load_aot = 1;
-    }
-#else
-    option_load_aot = 1;
-#endif
     aot_init();
 #endif
     ret = loader_exec(execfd, exec_path, target_argv, target_environ, regs,

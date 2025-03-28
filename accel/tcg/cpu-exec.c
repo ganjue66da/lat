@@ -412,35 +412,6 @@ struct tb_desc {
     uint32_t trace_vcpu_dstate;
 };
 
-#ifdef CONFIG_LATX_AOT
-static bool smc_lookup_cmp(const void *p, const void *d)
-{
-    const TranslationBlock *tb = p;
-    const struct tb_desc *desc = d;
-
-    if (tb->pc == desc->pc) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-TranslationBlock *tb_smc_hash_table_lookup(target_ulong pc)
-{
-    struct tb_desc desc;
-    uint32_t h;
-    desc.pc = pc;
-    h = qemu_xxhash2(pc);
-    return qht_lookup_custom(&tb_ctx.smc_hash_table, &desc, h, smc_lookup_cmp);
-}
-
-void tb_smc_hash_table_insert(target_ulong pc, TranslationBlock *tb)
-{
-    uint32_t h = qemu_xxhash2(pc);
-    qht_insert(&tb_ctx.smc_hash_table, tb, h, NULL);
-}
-#endif
-
 static bool tb_lookup_cmp(const void *p, const void *d)
 {
     const TranslationBlock *tb = p;
@@ -701,7 +672,7 @@ static inline TranslationBlock *tb_find(CPUState *cpu,
     cpu_get_tb_cpu_state(env, &pc, &cs_base, &flags);
 
     tb = tb_lookup(cpu, pc, cs_base, flags, cflags);
-#ifdef CONFIG_LATX_AOT2
+#ifdef CONFIG_LATX_AOT
     if (tb == NULL && option_aot) {
         mmap_lock();
         if (load_page_4(pc, cflags)) {

@@ -45,9 +45,7 @@ static int tb_cmp(const void *a, const void *b)
 seg_info **seg_info_vector;
 static int seg_info_num;
 static int curr_lib_seg_num;
-#ifdef CONFIG_LATX_AOT2
 static char *curr_lib_name;
-#endif
 uintptr_t table_end_addr;
 /* Helper functions used to dump tbs in hash table to a vector */
 static void do_tb_count(void *p, uint32_t hash, void *userp)
@@ -90,11 +88,9 @@ int add_rel_entry(aot_rel_kind kind, uint32_t **tc_offset,
                   uint32_t **rel_slots_num, uint32_t x86_rip_offset,
                   target_ulong extra_addend)
 {
-#ifdef CONFIG_LATX_AOT2
     if (!in_pre_translate) {
         assert(0);
     }
-#endif
     if (rel_table_capacity == 0) {
         rel_table_capacity = 10000;
         rel_entry_num = 0;
@@ -169,51 +165,6 @@ static void get_tb(void)
         return;
     }
     qsort(tb_vector, tb_num, sizeof(TranslationBlock *), tb_cmp);
-
-#ifndef CONFIG_LATX_AOT2
-#ifdef CONFIG_LATX_TU
-    int curr_tu_id = 0;
-    int tb_num_in_tu = 0;
-    const void *tu_begin = 0, *tu_end = 0;
-#endif
-    for (int i = 0; i < tb_num - 1; i++) {
-        if (!tb_vector[i]) {
-            continue;
-        }
-        if ((tb_vector[i]->pc == tb_vector[i + 1]->pc)
-		&& (tb_vector[i]->cflags == tb_vector[i + 1]->cflags)) {
-            if (1 || option_debug_aot) {
-                qemu_log_mask(LAT_LOG_AOT, "FIXME: i=%d pc=0x"TARGET_FMT_lx" skip.\n",
-                    i, tb_vector[i]->pc);
-            }
-            tb_vector[i] = NULL;
-	    continue;
-	}
-	lsassert(!not_required_tb(tb_vector[i]));
-
-#ifdef CONFIG_LATX_TU
-        lsassert(0 && ("not support this mode\n");
-        /* Check the integrity of Tu and invalidate incomplete Tu */
-        if (tb_vector[i]->is_first_tb) {
-            if (tb_num_in_tu && (tb_num_in_tu != tb_vector[curr_tu_id]->tb_num)) {
-                tb_vector[curr_tu_id] = NULL;
-            }
-            curr_tu_id = i;
-            tb_num_in_tu = 0;
-            tu_begin = tb_vector[i]->tc.ptr;
-            tu_end = tu_begin + tb_vector[i]->s_data->tu_size;
-        } else if (tb_vector[i]->tu_tb_mode != TB_GEN_CODE) {
-            /* curr tb and first tb are not in same tu */
-            if (tb_vector[i]->tc.ptr < tu_begin || tb_vector[i]->tc.ptr > tu_end) {
-                tb_vector[i] = NULL;
-                continue;
-            }
-        }
-        tb_num_in_tu++;
-#endif
-    }
-#endif
-
 }
 
 /* Prepare segment infomation. */ 
@@ -606,10 +557,6 @@ static uint32_t *fill_ins_buff(uint64_t insn_table_offset, aot_tb *p_aot_tbs,
     return insn_buffer;
 }
 
-#ifdef CONFIG_LATX_AOT2
-
-#endif
-
 void get_aot_path(const char *lib_name, char *file_path) 
 {
     assert(lib_name && file_path);
@@ -649,24 +596,6 @@ static int write_aot_file(int *lockfd, aot_header *p_header, uint32_t *p_insn,
         uint32_t *insn_buffer, unsigned long total_code_cache_size)
 {
     char *pathtmp;
-#ifndef CONFIG_LATX_AOT2
-    pathtmp = (char *)malloc(sizeof(char) * PATH_MAX);
-    assert(pathtmp);
-    strncpy(pathtmp, aot_file_path, 99);
-    if (access(pathtmp, 0) >= 0) {
-        strcat(pathtmp, "A");
-        for (int jj = 0; jj < 100; jj++) {
-            if (access(pathtmp, 0) < 0) {
-                break;
-            }
-            pathtmp[strlen(pathtmp) - 1]++;
-        }
-    }
-    file_lock(aot_file_lock, lockfd, F_WRLCK, false);
-    if (*lockfd < 0) {
-        return -1;
-    }
-#else 
     get_aot_path(curr_lib_name, aot_file_path);
     pathtmp = aot_file_path;
     if (access(pathtmp, 0) >= 0) {
@@ -677,7 +606,6 @@ static int write_aot_file(int *lockfd, aot_header *p_header, uint32_t *p_insn,
             return -1;
         }
     }
-#endif
 
     /* Write file metadata infomation(aot_buffer) into aot. */
     int fd = open(pathtmp, O_CREAT | O_WRONLY | O_TRUNC, 0644);
@@ -717,44 +645,6 @@ static int write_aot_file(int *lockfd, aot_header *p_header, uint32_t *p_insn,
 
     return 0;
 }
-
-#ifndef CONFIG_LATX_AOT2
-static void end_aot(sigset_t oldmask, TaskState *ts) 
-{
-    if (1 || !fork()) {
-        long long unsigned int file_size = 0;
-        long long unsigned int file_left_size = 0;
-        int usedefault = 0;
-        if (aot_file_size_optarg == NULL) {
-            usedefault = 1;
-        } else if (parse_uint_full(aot_file_size_optarg,
-            &file_size, 0)) {
-            qemu_log_mask(LAT_LOG_AOT, "Invalid aot file size: %s",
-              aot_file_size_optarg);
-            usedefault = 1;
-        }
-        if (aot_left_file_minsize_optarg == NULL) {
-            usedefault = 1;
-        } else if (parse_uint_full(aot_left_file_minsize_optarg,
-           &file_left_size, 0)) {
-            qemu_log_mask(LAT_LOG_AOT, "Invalid aot file size: %s",
-              aot_left_file_minsize_optarg);
-            usedefault = 1;
-        }
-        if (file_left_size >= file_size) {
-            usedefault = 1;
-        }
-        if (usedefault) {
-            file_size = 20 * 1024;
-            file_left_size = 500;
-        }
-        aot_file_ctx(file_size, file_left_size);
-        /* _exit(0); */
-    }
-    sigprocmask(SIG_SETMASK, &oldmask, NULL);
-    qatomic_xchg(&ts->signal_pending, 0);
-}
-#endif
 
 void do_generate_aot(int first_seg_in_lib, int end_seg_in_lib) 
 {
@@ -811,24 +701,8 @@ void do_generate_aot(int first_seg_in_lib, int end_seg_in_lib)
     int lockfd = -1;
     write_aot_file(&lockfd, p_header, p_insn, 
             insn_buffer, total_code_cache_size);
-#ifndef CONFIG_LATX_AOT2
-    close(lockfd);
-    flock_set(lockfd, F_UNLCK, true);
-    end_aot(oldmask, ts);
-#endif
-
 }
 
-/* aot_v1 */
-#ifndef CONFIG_LATX_AOT2
-static void generate_aot_v1(void) {
-    qemu_log_mask(LAT_LOG_AOT, "--------- aot_generate V1 -------\n");
-    /* save all seg in one aot file */
-    do_generate_aot(0, seg_info_num);
-}
-
-/* aot_v2 */
-#else
 static const char lib_black_list[][PATH_MAX] =
 {
     {"end"},
@@ -1034,7 +908,6 @@ static void generate_aot_v2(CPUState *cpu)
         aot_file_ctx(12 * 1024 , 500);
     }
 }
-#endif
 
 void clear_rel_table(void)
 {
@@ -1069,11 +942,7 @@ void aot_generate(CPUState *cpu)
 
     get_dynamic_message(tb_vector, tb_num, seg_info_vector, &seg_info_num);
 
-#ifndef CONFIG_LATX_AOT2
-    generate_aot_v1();
-#else
     generate_aot_v2(cpu);
-#endif
 }
 
 int aot_get_file_init(char *aot_file)
@@ -1081,11 +950,7 @@ int aot_get_file_init(char *aot_file)
     int count = 0;
     char pathtmp[PATH_MAX] = {0};
     if (access(aot_file, 0) >= 0) {
-#ifndef CONFIG_LATX_AOT2
-        strncpy(pathtmp, aot_file_path, PATH_MAX);
-#else
         strncpy(pathtmp, aot_file, PATH_MAX);
-#endif
         strcat(pathtmp, "A");
         for (int jj = 1; jj < 100; jj++) {
             if (access(pathtmp, 0) < 0) {
@@ -1472,18 +1337,6 @@ static aot_segment *get_segment(char *lib_name, uint64_t aot_offset,
         abi_long start, abi_long end) 
 {
     aot_segment *p_segment;
-#ifndef CONFIG_LATX_AOT2
-    for (int buf_index = 0;
-        buf_index < aot_buffer_all_num; buf_index++) {
-        aot_buffer = aot_buffer_all[buf_index].p;
-        lsassert(aot_buffer);
-        p_segment = aot_find_segment(lib_name, aot_offset);
-        if (p_segment) {
-            return p_segment;
-        }
-    }
-    return NULL;
-#else
     lib_info *lib = lib_tree_lookup(lib_name);
     if (lib == NULL) {
         aot_buffer = NULL;
@@ -1520,7 +1373,6 @@ static aot_segment *get_segment(char *lib_name, uint64_t aot_offset,
     }
         
     return p_segment;
-#endif
 }
 
 static void aot_guest_code_protect(target_ulong seg_begin,
@@ -1584,16 +1436,12 @@ void recover_aot_tb(char *lib_name, uint64_t aot_offset, abi_long start,
         qemu_log_mask(LAT_LOG_AOT, "---------------------------------------------\n");
     }
 
-#ifdef CONFIG_LATX_AOT2
     seg_info *seg = segment_tree_lookup2(start, start + len);
     if (seg && (seg->seg_begin == start) && (seg->seg_end == start + len)) {
         seg->buffer = aot_buffer;
         seg->p_segment = p_segment;
     }
     aot_guest_code_protect(start, start + len, p_segment);
-    return;
-#endif
-    do_recover_segment(p_segment, start, start + len);
 }
 
 static void close_all_fd(void) 
@@ -1651,12 +1499,10 @@ void aot_exit_entry(CPUState *cpu, int is_end)
     if (!option_aot) {
         return;
     }
-#ifdef CONFIG_LATX_AOT2
     if (in_pre_translate) {
 	qemu_log_mask(LAT_LOG_AOT, "FIXME: tb flush in pre translate\n");
 	_exit(0);
     }
-#endif
 
     bool in_exclusive_context = cpu_in_exclusive_context(cpu);
     if (!in_exclusive_context) {
@@ -1725,9 +1571,6 @@ parent_exit:
 
     creat_daemon(is_end);
 
-    if (aot_buffer_all_num > 1) {
-    	do_merge_seg_aot();
-    }
     aot_generate(cpu);
     _exit(EXIT_SUCCESS);
 }
@@ -1743,17 +1586,14 @@ void aot_init(void)
     if (option_load_aot) {
         aot_link_tree_init();
         merge_segment_tree_init();
-#ifndef CONFIG_LATX_AOT2
-        aot_load(NULL);
-#else
         lib_tree_init();
         page_tree_init();
-#endif
     }
 }
 
-target_ulong aot_get_call_offset(ADDRX addr, TranslationBlock *tb)
+target_ulong aot_get_call_offset(ADDRX addr)
 {
+    TranslationBlock *tb = lsenv->tr_data->curr_tb;
     target_ulong call_offset = 0;
     seg_info *curr_tb_seg = segment_tree_lookup(tb->pc);
     if (curr_tb_seg) {
@@ -1761,9 +1601,8 @@ target_ulong aot_get_call_offset(ADDRX addr, TranslationBlock *tb)
     }
     return call_offset;
 }
-
 #else
-target_ulong aot_get_call_offset(ADDRX addr, TranslationBlock *tb)
+target_ulong aot_get_call_offset(ADDRX addr)
 {
     return 0;
 }

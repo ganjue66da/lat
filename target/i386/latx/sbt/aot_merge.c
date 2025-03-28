@@ -9,7 +9,6 @@
 
 #ifdef CONFIG_LATX_AOT
 
-#ifdef CONFIG_LATX_AOT2
 static inline gint tb_pc_cmp(gconstpointer a, gconstpointer b)
 {
     tb_tmp_message *pa = (tb_tmp_message *)a;
@@ -25,8 +24,6 @@ static inline gint tb_pc_cmp(gconstpointer a, gconstpointer b)
     uint32_t b_cflags = pb->cflags & CF_PARALLEL;
     return a_cflags > b_cflags ? 1 : (a_cflags < b_cflags ? -1 : 0);
 }
-#endif
-
 
 static GTree *merge_segment_tree;
 static void merge_seg_delete(gconstpointer a)
@@ -39,6 +36,7 @@ static void merge_seg_delete(gconstpointer a)
     g_tree_destroy(oldkey->tb_tree);
     free(oldkey);
 }
+
 static gint merge_seg_cmp(gconstpointer a, gconstpointer b)
 {
     merge_seg_info *pa = (merge_seg_info *)a;
@@ -428,10 +426,8 @@ static void merge_aot_generate(void)
     char *aot_x86_lib_names = (char *)(aot_page_table + page_count);
     char *last_name = aot_x86_lib_names;
     char *curr_name = aot_x86_lib_names;
-#ifdef CONFIG_LATX_AOT2
     bool is_pe = is_pe_file(merge_seg_info_vector[0]->file_name);
     p_header->is_pe |= is_pe;
-#endif
     int page_index = 0;
     for (int i = 0; i < seg_info_num; i++) {
         seg_info *curr_seg_info = merge_seg_info_vector[i]->s_info;
@@ -454,9 +450,7 @@ static void merge_aot_generate(void)
             curr_name += strlen(file_name) + 1;
         }
 
-#ifdef CONFIG_LATX_AOT2
         p_segments[i].is_pe = is_pe;
-#endif
         p_segments[i].lib_name_offset =
             (uintptr_t)last_name - (uintptr_t)p_header;
         p_segments[i].segment_tbs_num = 0;
@@ -634,7 +628,6 @@ out:
     qatomic_xchg(&ts->signal_pending, 0);
 }
 
-#ifdef CONFIG_LATX_AOT2
 static int aot_load_no_lock(char *lib_name)
 {
     aot_buffer_all_num = 0;
@@ -937,5 +930,4 @@ void aot2_merge(char *curr_lib_name, int first_seg_id,
 #endif
     aot_buffer_all_num = 0;
 }
-#endif
 #endif

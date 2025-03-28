@@ -112,8 +112,8 @@ void options_init(void)
 
 #ifdef CONFIG_LATX_AOT
     option_aot = 1;
+    option_load_aot = 1;
     option_aot_wine = 0;
-    option_load_aot = 0;
     option_debug_aot = 0;
 #endif
 #ifdef CONFIG_LATX_IMM_REG

@@ -14,6 +14,8 @@
 #include "tu.h"
 #endif
 
+#ifdef CONFIG_LATX_AOT
+
 inline static void copy_code_to_buff(void *tb_buff, aot_tb *p_aot_tb) {
     assert(p_aot_tb->tu_size >= p_aot_tb->tb_cache_size);
     memcpy(tb_buff, aot_buffer + p_aot_tb->tb_cache_offset,
@@ -83,37 +85,6 @@ inline static TranslationBlock *creat_tb(aot_tb *p_aot_tb, abi_ulong start,
     return tb;
 }
 
-#ifndef CONFIG_LATX_AOT2
-static void tb_unlink(TranslationBlock *tb) {
-    for (int j = 0; j < 2; j++) {
-#ifdef CONFIG_LATX_INSTS_PATTERN
-        if (tb->eflags_target_arg[j] !=
-            TB_JMP_RESET_OFFSET_INVALID) {
-            tb_eflag_recover(tb, j);
-        }
-#endif
-        if (tb->jmp_reset_offset[j] !=
-            TB_JMP_RESET_OFFSET_INVALID) {
-            uint32_t *pinsn =
-                (uint32_t *)(tb->tc.ptr + tb->jmp_target_arg[j]);
-            if (option_debug_aot) {
-                qemu_log_mask(LAT_LOG_AOT, "\ttb " TARGET_FMT_lx
-                        " jmp slot address %p\n", tb->pc, pinsn);
-            }
-            if (((*pinsn) & 0xfc000000) != 0x50000000 &&
-                !(((*pinsn) & 0xfe000000) == 0x1e000000 &&/* pcaddu18i */
-                    (*(pinsn + 1) & 0xfc000000) == 0x4c000000)) {/* jirl */
-                qemu_log_mask(LAT_LOG_AOT,
-                        "Error! jmp_target_arg is not B or jirl insn\n");
-                continue;
-            }
-            *pinsn &= 0xfc000000;
-            *pinsn |= 1 << 10;
-        }
-    }
-}
-#endif
-
 #include "latx-signal.h"
 #include "qemu/atomic.h"
 #ifdef CONFIG_LATX_TBMINI_ENABLE
@@ -149,9 +120,6 @@ static void recover_tb_range(target_ulong page, struct aot_tb *p_aot_tbs,
         tbm = (uint64_t *)((uintptr_t)tcg_ctx->code_gen_ptr - sizeof(struct TBMini));
         aot_tbmini_set_pointer(tbm, (uint64_t)tb, TB_MAGIC);
 #endif
-#ifndef CONFIG_LATX_AOT2
-        tb_unlink(tb);
-#endif
         /* Relocate this tb by traverse aot_rel_table. */
         aot_do_tb_reloc(tb, &p_aot_tbs[i], start, end);
         if (p_aot_tbs[i].last_ir1_type == IR1_TYPE_BRANCH) {
@@ -165,9 +133,7 @@ static void recover_tb_range(target_ulong page, struct aot_tb *p_aot_tbs,
         aot_tb_register(tb);
 
 #ifdef CONFIG_LATX_DEBUG
-#ifdef CONFIG_LATX_AOT2
         assert((tb->pc & TARGET_PAGE_MASK) == page);
-#endif
 	if (i) {
             if (p_aot_tbs[i].offset_in_segment <= p_aot_tbs[i - 1].offset_in_segment) {
                 assert((p_aot_tbs[i].offset_in_segment
@@ -244,18 +210,7 @@ static void recover_tb_range(target_ulong page, struct aot_tb *p_aot_tbs,
 #endif
             tb->tu_search_addr = 
                 (uint8_t *)((uintptr_t)tb->tc.ptr + p_aot_tbs[k].tu_search_addr_offset);
-#ifndef CONFIG_LATX_AOT2
-            /* unlink This TB in current version. */
-            tb_unlink(tb);
-        	if (p_aot_tbs[k].last_ir1_type == IR1_TYPE_BRANCH 
-        	        && tb->jmp_target_arg[1] != TB_JMP_RESET_OFFSET_INVALID) {
-        	    lsassert(tb->jmp_target_arg[1]  && tb->jmp_target_arg[1]
-        	        < tb->tc.size);
-        	    tb_reset_jump(tb, 1);
-        	}
-#else
             assert((tb->pc & TARGET_PAGE_MASK) == page);
-#endif
             assert((tb->cflags & CF_PARALLEL) == (tcg_ctx->tb_cflags & CF_PARALLEL));
             aot_do_tb_reloc(tb, &p_aot_tbs[k], start, end);
             aot_tb_register(tb);
@@ -285,7 +240,6 @@ void do_recover_segment(aot_segment *p_segment,
     recover_tb_range(0, p_aot_tbs, num, start, end);
 }
 
-#ifdef CONFIG_LATX_AOT2
 #include<sys/syscall.h>
 
 /* static int load_sum_tb; */
@@ -303,11 +257,9 @@ int load_page_4(target_ulong pc, uint32_t cflags) {
 
 int load_page(target_ulong pc, uint32_t cflags)
 {
-#ifdef CONFIG_LATX_AOT2
     if (in_pre_translate) {
         return 0;
     }
-#endif
     if (page_get_page_state(pc) >= PAGE_LOADED) {
         return 0;
     }

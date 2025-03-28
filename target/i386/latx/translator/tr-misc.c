@@ -424,12 +424,12 @@ bool translate_call(IR1_INST *pir1)
     IR2_OPND return_addr_opnd = ra_alloc_itemp();
     IR2_OPND x86_addr_opnd = ra_alloc_itemp();
 
-    TranslationBlock *tb = lsenv->tr_data->curr_tb;
     target_ulong call_offset __attribute__((unused)) =
-            aot_get_call_offset(ir1_addr_next(pir1), tb);
+            aot_get_call_offset(ir1_addr_next(pir1));
     aot_load_guest_addr(x86_addr_opnd, ir1_addr_next(pir1),
                         LOAD_CALL_TARGET, call_offset);
 
+    TranslationBlock *tb = lsenv->tr_data->curr_tb;
     if (option_jr_ra_stack) {
         la_code_align(2, 0x03400000);
         IR2_OPND target_ptr = ra_alloc_data();
@@ -507,9 +507,8 @@ bool translate_callnext(IR1_INST *pir1)
     /* 1. load next_instr_addr to tmp_reg */
     IR2_OPND next_addr = ra_alloc_itemp();
 
-    TranslationBlock *tb = lsenv->tr_data->curr_tb;
     target_ulong call_offset __attribute__((unused)) =
-            aot_get_call_offset(ir1_addr_next(pir1), tb);
+            aot_get_call_offset(ir1_addr_next(pir1));
     aot_load_guest_addr(next_addr, ir1_addr_next(pir1),
                         LOAD_CALL_TARGET, call_offset);
     /* 2. store next_addr to x86_stack */
@@ -538,9 +537,8 @@ bool translate_callthunk(IR1_INST *pir1)
     int opnd0_gpr_num = ht_pc_thunk_lookup(ir1_target_addr(pir1));
     IR2_OPND dest  = ra_alloc_gpr(opnd0_gpr_num);
 
-    TranslationBlock *tb = lsenv->tr_data->curr_tb;
     target_ulong call_offset __attribute__((unused)) =
-            aot_get_call_offset(ir1_addr_next(pir1), tb);
+            aot_get_call_offset(ir1_addr_next(pir1));
     aot_load_guest_addr(dest, ir1_addr_next(pir1),
                         LOAD_CALL_TARGET, call_offset);
     return true;
@@ -568,12 +566,12 @@ bool translate_callin(IR1_INST *pir1)
     /* 3. save return address onto stack */
     ra_alloc_itemp();
     IR2_OPND return_addr_opnd = ra_alloc_itemp();
-    TranslationBlock *tb = lsenv->tr_data->curr_tb;
     target_ulong call_offset __attribute__((unused)) =
-            aot_get_call_offset(ir1_addr_next(pir1), tb);
+            aot_get_call_offset(ir1_addr_next(pir1));
     aot_load_guest_addr(return_addr_opnd, ir1_addr_next(pir1),
                         LOAD_CALL_TARGET, call_offset);
 
+    TranslationBlock *tb = lsenv->tr_data->curr_tb;
     if (option_jr_ra_stack) {
         la_code_align(2, 0x03400000);
         IR2_OPND target_ptr = ra_alloc_data();
@@ -1075,7 +1073,7 @@ bool translate_int_syscall(IR1_INST *pir1)
     /* 3. store next pc to CPUX86State */
     IR2_OPND next_pc = ra_alloc_itemp();
     target_ulong call_offset __attribute__((unused)) =
-            aot_get_call_offset(ir1_addr_next(pir1), tb);
+            aot_get_call_offset(ir1_addr_next(pir1));
     aot_load_guest_addr(next_pc, ir1_addr_next(pir1),
                         LOAD_CALL_TARGET, call_offset);
 
@@ -1125,9 +1123,8 @@ bool translate_int(IR1_INST *pir1)
 
     /* * store next pc to CPUX86State */
     IR2_OPND next_pc = ra_alloc_itemp();
-    TranslationBlock *tb = lsenv->tr_data->curr_tb;
     target_ulong call_offset __attribute__((unused)) =
-            aot_get_call_offset(ir1_addr_next(pir1), tb);
+            aot_get_call_offset(ir1_addr_next(pir1));
     aot_load_guest_addr(next_pc, ir1_addr_next(pir1),
                         LOAD_CALL_TARGET, call_offset);
 
@@ -1167,9 +1164,8 @@ bool translate_syscall(IR1_INST *pir1)
     /* store next pc to CPUX86State */
     IR2_OPND next_pc = ra_alloc_itemp();
     /* * li_guest_addr(next_pc, pir1->_inst_length + pir1->_addr); */
-    TranslationBlock *tb = lsenv->tr_data->curr_tb;
     target_ulong call_offset __attribute__((unused)) =
-            aot_get_call_offset(ir1_addr_next(pir1), tb);
+            aot_get_call_offset(ir1_addr_next(pir1));
     aot_load_guest_addr(next_pc, ir1_addr_next(pir1),
                         LOAD_CALL_TARGET, call_offset);
 

@@ -231,7 +231,7 @@ int add_rel_entry(aot_rel_kind kind, uint32_t **tc_offset,
                   target_ulong extra_addent);
 void aot_exit_entry(CPUState *cpu, int is_end);
 void aot_init(void);
-target_ulong aot_get_call_offset(ADDRX addr, TranslationBlock *tb);
+target_ulong aot_get_call_offset(ADDRX addr);
 void aot_generate(CPUState *cpu);
 int aot_get_file_init(char *aot_file);
 void clear_rel_table(void);
@@ -268,11 +268,9 @@ extern aot_file_info *aot_buffer_all;
 extern int aot_buffer_all_num;
 
 void get_aot_path(const char *lib_name, char *file_path);
-#ifdef CONFIG_LATX_AOT2
 char in_share_list(char *lib);
 char in_black_list(char *lib);
 char in_white_list(char *lib);
 void set_lock_name(char *aot_file_path);
-#endif
 
 #endif

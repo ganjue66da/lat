@@ -286,6 +286,7 @@ IR2_INST *ir2_relocate(TRANSLATION_DATA *lat_ctx, IR2_INST *current, int *counte
         ir2_remove(cur_id);
         break;
 
+#ifdef CONFIG_LATX_AOT
     case LISA_DATA_ST_REL_TABLE:
         lsassert(ir2_opnd_is_pseudo(&current->_opnd[0]));
         lsassert(ir2_opnd_is_pseudo(&current->_opnd[1]));
@@ -307,6 +308,7 @@ IR2_INST *ir2_relocate(TRANSLATION_DATA *lat_ctx, IR2_INST *current, int *counte
 
         ir2_remove(cur_id);
         break;
+#endif
 
     case LISA_X86_INST:
         break;

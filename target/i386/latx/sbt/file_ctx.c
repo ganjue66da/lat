@@ -115,7 +115,6 @@ uint64_t aot_file_rmgroup(char *aotFile)
     return f_size;
 }
 
-#ifdef CONFIG_LATX_AOT2
 static bool is_aot_file(char *file_name)
 {
     int file_len = strlen(file_name);
@@ -152,7 +151,6 @@ static bool is_aot_lock(char *file_name)
     }
     return false;
 }
-#endif
 
 static void aot_file_release_oldfile(struct aot_info **f_info,
   int count, int needRelaeseMB)
@@ -179,10 +177,8 @@ static void aot_file_release_oldfile(struct aot_info **f_info,
             continue;
         }
 
-#ifdef CONFIG_LATX_AOT2
         strcpy(aot_file_lock, f_info[i]->d_name);
         strcat(aot_file_lock, ".lock");
-#endif
         if (file_lock(aot_file_lock, &fd, F_WRLCK, false) >= 0) {
             hasReleaseSize += aot_file_rmgroup(f_info[i]->d_name) / (1024 * 1024);
             if (hasReleaseSize >= needRelaeseMB) {
@@ -227,19 +223,9 @@ int aot_file_ctx(uint64_t maxSize, uint64_t leftMinSize)
 	    qemu_log_mask(LAT_LOG_AOT, "lstat %d \n", errno);
             continue;
         }
-#ifndef CONFIG_LATX_AOT2
-        if (!((strlen(p_dirent->d_name) >= 44) &&
-            p_dirent->d_name[40] == '.' &&
-            p_dirent->d_name[41] == 'a' &&
-            p_dirent->d_name[42] == 'o' &&
-            p_dirent->d_name[43] == 't')) {
-            continue;
-        }
-#else
         if (!is_aot_file(p_dirent->d_name) && !is_aot_lock(p_dirent->d_name)) {
             continue;
         }
-#endif
         aot_total_size += statbuf.st_size;
         struct aot_info *my_info = malloc(sizeof(struct aot_info));
         strncpy(my_info->d_name, subdir, PATH_MAX);
@@ -255,13 +241,8 @@ int aot_file_ctx(uint64_t maxSize, uint64_t leftMinSize)
     closedir(p_dir);
     aot_total_size /= 1024 * 1024;/*B to MB*/
     if (aot_total_size >= (maxSize - leftMinSize)) {
-#ifndef CONFIG_LATX_AOT2
-        aot_file_release_oldfile(f_info, i_count,
-            aot_total_size - (maxSize - leftMinSize));
-#else
         aot_file_release_oldfile(f_info, i_count,
             aot_total_size - (maxSize >> 1));
-#endif
     }
 
     if (aot_dir) {

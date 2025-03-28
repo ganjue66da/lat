@@ -1956,7 +1956,6 @@ static void generate_indirect_goto(void *code_buf, bool parallel)
      * ra_alloc_dbt_arg2: next x86 ip
      */
 
-    TranslationBlock *tb = lsenv->tr_data->curr_tb;
     la_data_li(target, context_switch_native_to_bt_ret_0);
     aot_la_append_ir2_jmp_far(target, base, B_EPILOGUE_RET_0, 0);
 
@@ -2096,7 +2095,7 @@ direct_jmp:
         }
 
         target_ulong call_offset __attribute__((unused)) =
-                aot_get_call_offset(succ_x86_addr, tb);
+                aot_get_call_offset(succ_x86_addr);
         aot_load_guest_addr(succ_x86_addr_opnd, succ_x86_addr,
                 LOAD_CALL_TARGET, call_offset);
 

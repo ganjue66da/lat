@@ -80,8 +80,6 @@
 #undef CONFIG_LATX_XCOMISX_OPT
 #define CONFIG_LATX_XCOMISX_OPT
 
-#undef CONFIG_LATX_AOT2
-#define CONFIG_LATX_AOT2
 #undef CONFIG_LATX_TU
 #define CONFIG_LATX_TU              /* tu, */
 #undef CONFIG_LATX_IMM_REG

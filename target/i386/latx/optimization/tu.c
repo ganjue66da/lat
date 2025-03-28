@@ -277,7 +277,7 @@ static void generate_tu_switch_native_tb(TranslationBlock *broken_tb)
     aot_load_host_addr(tb_ptr_opnd, broken_tb, LOAD_TB_ADDR, 0);
 
     target_ulong call_offset __attribute__((unused)) =
-            aot_get_call_offset(succ_x86_addr, broken_tb);
+            aot_get_call_offset(succ_x86_addr);
     lsassert(succ_x86_addr);
     aot_load_host_addr(succ_x86_addr_opnd, succ_x86_addr,
             LOAD_CALL_TARGET, call_offset);
@@ -804,6 +804,7 @@ static void fix_rel_table(uint32_t tb_num_in_tu, TranslationBlock **tb_list)
         }
     }
 }
+#endif
 
 static void mov_unlink_stub_to_end(uint32_t tb_num_in_tu, TranslationBlock **tb_list)
 {
@@ -876,7 +877,9 @@ static void mov_unlink_stub_to_end(uint32_t tb_num_in_tu, TranslationBlock **tb_
         }
     }
 
+#ifdef CONFIG_LATX_AOT
     fix_rel_table(tb_num_in_tu, tb_list);
+#endif
 }
 
 void translate_tu(uint32 tb_num_in_tu, TranslationBlock **tb_list)
@@ -1104,7 +1107,7 @@ int translate_tb_in_tu(struct TranslationBlock *tb)
         return tr_translate_tb(tb);
     }
 }
-#endif
+
 #if defined(CONFIG_LATX_TU) || defined(CONFIG_LATX_AOT)
 void get_last_info(TranslationBlock *tb, IR1_INST* pir1)
 {

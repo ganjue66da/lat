@@ -241,7 +241,7 @@ static IR2_OPND convert_mem_helper(IR1_OPND *opnd1, IR2_OPND *arg_dest_op,
                             imm_log("[mem convert exact]pre_cache:true\n");
                             // initialize
                             target_ulong call_offset __attribute__((unused)) =
-                                aot_get_call_offset(res.offset, tb);
+                                aot_get_call_offset(res.offset);
                             aot_load_guest_addr(dest_op, res.offset,
                                                 LOAD_CALL_TARGET, call_offset);
                             if (!option_imm_precache) {
@@ -280,7 +280,7 @@ static IR2_OPND convert_mem_helper(IR1_OPND *opnd1, IR2_OPND *arg_dest_op,
         }
 #endif
         target_ulong call_offset __attribute__((unused)) =
-                aot_get_call_offset(offset, tb);
+                aot_get_call_offset(offset);
         aot_load_guest_addr(dest_op, offset, LOAD_CALL_TARGET, call_offset);
         if (host_off) {
             *host_off = 0;

@@ -49,14 +49,12 @@ void mmap_lock(void)
 #endif
 }
 
-#ifdef CONFIG_LATX_AOT2
 void mmap_trylock(void)
 {
     if (mmap_lock_count++ == 0) {
         pthread_mutex_trylock(&mmap_mutex);
     }
 }
-#endif
 
 void mmap_unlock(void)
 {
@@ -261,7 +259,7 @@ int target_mprotect(abi_ulong start, abi_ulong len, int target_prot)
     }
     page_set_flags(start, start + len, page_flags);
     if(target_prot == PROT_NONE) {
-#ifdef CONFIG_LATX_AOT2
+#ifdef CONFIG_LATX_AOT
         if (option_aot && segment_tree_lookup2(start, start + len)) {
             page_set_page_state_range(start, start + len, PAGE_SMC);
         }
@@ -1120,7 +1118,7 @@ int target_munmap(abi_ulong start, abi_ulong len, int rlimit_as_account)
     }
 
     if (ret == 0) {
-#ifdef CONFIG_LATX_AOT2
+#ifdef CONFIG_LATX_AOT
         if (option_aot) {
             seg_info *seg = segment_tree_lookup2(start, start + len);
             if (seg) {
@@ -1263,7 +1261,7 @@ abi_long target_mremap(abi_ulong old_addr, abi_ulong old_size,
                        prot | PAGE_VALID | PAGE_RESET);
     }
 
-#ifdef CONFIG_LATX_AOT2
+#ifdef CONFIG_LATX_AOT
     if (option_aot) {
         seg_info *seg = segment_tree_lookup2(old_addr, old_addr + old_size);
         if (seg) {

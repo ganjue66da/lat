@@ -32,10 +32,6 @@ struct TBContext {
 
     struct qht htable;
 
-#ifdef CONFIG_LATX_AOT
-    struct qht smc_hash_table;
-#endif
-
     /* statistics */
     unsigned tb_flush_count;
 };

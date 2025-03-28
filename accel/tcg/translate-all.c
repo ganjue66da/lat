@@ -1332,13 +1332,6 @@ static void tb_htable_init(void)
 {
     unsigned int mode = QHT_MODE_AUTO_RESIZE;
 
-#ifdef CONFIG_LATX_AOT
-    /* init self modify code hash table */
-    if (option_aot) {
-        qht_init(&tb_ctx.smc_hash_table, tb_cmp, CODE_GEN_HTABLE_SIZE, mode);
-    }
-#endif
-
     qht_init(&tb_ctx.htable, tb_cmp, CODE_GEN_HTABLE_SIZE, mode);
 }
 
@@ -1393,7 +1386,9 @@ static void tb_remove_all(void)
 {
     assert_memory_lock();
     memset(&tb_root, 0, sizeof(tb_root));
+#ifdef CONFIG_LATX_AOT
     page_flush_page_state(0, 0);
+#endif
 }
 
 /* Call with mmap_lock held. */
@@ -1472,7 +1467,7 @@ static void tb_remove_all_1(int level, void **lp)
         for (i = 0; i < V_L2_SIZE; ++i) {
             page_lock(&pd[i]);
             pd[i].first_tb = (uintptr_t)NULL;
-#ifdef CONFIG_LATX_AOT2
+#ifdef CONFIG_LATX_AOT
             if (pd[i].page_state == PAGE_LOADED) {
 	        pd[i].page_state = PAGE_FLUSH;
             }
@@ -1580,7 +1575,7 @@ static gboolean tb_host_size_iter(gpointer key, gpointer value, gpointer data)
 /* flush all the translation blocks */
 void do_tb_flush(CPUState *cpu, run_on_cpu_data tb_flush_count)
 {
-#ifdef CONFIG_LATX_AOT2
+#ifdef CONFIG_LATX_AOT
     if (option_aot && in_pre_translate) {
 	qemu_log_mask(LAT_LOG_AOT, "FIXME: tb flush in pre translate\n");
 	_exit(0);
@@ -2357,7 +2352,7 @@ TranslationBlock *tb_gen_code(CPUState *cpu,
     flush_idcache_range(0, 0, 0);
 #endif
 
-#ifdef CONFIG_LATX_AOT2
+#ifdef CONFIG_LATX_AOT
     if (in_pre_translate) {
         return tb;
     }
@@ -2433,7 +2428,9 @@ void tb_invalidate_phys_range(tb_page_addr_t start, tb_page_addr_t end)
         tb_phys_invalidate__locked(tb);
     }
 
+#ifdef CONFIG_LATX_AOT
     page_flush_page_state(start, end);
+#endif
 }
 
 /*
@@ -2472,11 +2469,13 @@ bool tb_invalidate_phys_page_unwind(tb_page_addr_t addr, uintptr_t pc)
 
         addr &= TARGET_PAGE_MASK;
 
+#ifdef CONFIG_LATX_AOT
         if (option_aot) {
             if (segment_tree_winepe_lookup(addr)) {
                 return false;
             }
         }
+#endif
 
         PAGE_FOR_EACH_TB(addr, addr + TARGET_PAGE_SIZE, unused, tb, n) {
             if (current_tb == tb &&
@@ -2650,7 +2649,7 @@ void tb_invalidate_phys_range(target_ulong start, target_ulong end)
         if (pd == NULL) {
             continue;
         }
-#ifdef CONFIG_LATX_AOT2
+#ifdef CONFIG_LATX_AOT
         if (pd->page_state == PAGE_LOADED) {
             pd->page_state = PAGE_FLUSH;
         }
@@ -3900,7 +3899,7 @@ int page_unprotect(target_ulong address, uintptr_t pc)
     return current_tb_invalidated ? 2 : 1;
 }
 
-#ifdef CONFIG_LATX_AOT2
+#ifdef CONFIG_LATX_AOT
 typedef struct PageStateNode {
     IntervalTreeNode itree;
     uint8 page_state;
