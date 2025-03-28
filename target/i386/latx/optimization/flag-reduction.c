@@ -304,6 +304,9 @@ static inline bool rotate_need_of(IR1_INST *pir1)
     IR1_OPCODE op = ir1_opcode(pir1);
     if (op == dt_X86_INS_RCL || op == dt_X86_INS_RCR ||
         op == dt_X86_INS_ROL || op == dt_X86_INS_ROR) {
+        if (ir1_get_opnd_num(pir1) == 1) {
+            return false;
+        }
         IR1_OPND *opnd0 = ir1_get_opnd(pir1, 0);
         IR1_OPND *opnd1 = ir1_get_opnd(pir1, 1);
         if (!ir1_opnd_is_imm(opnd1)) return true;
