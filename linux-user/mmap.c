@@ -829,24 +829,67 @@ abi_long target_mmap(abi_ulong start, abi_ulong len, int target_prot,
             abi_ulong tmp_end = end;
 
             if (tmp_start > real_start) {
-                if (hostpage_exist_shadow_page(start)) {
-                    if (real_end == real_start + qemu_host_page_size) {
+                if (hostpage_exist_shadow_page(tmp_start)) {
+                    for (abi_ulong curr_addr = tmp_start;
+                            curr_addr < end && curr_addr < HOST_PAGE_ALIGN(start);
+                            curr_addr += TARGET_PAGE_SIZE) {
+                        ShadowPageDesc *shadow_pd
+                            = page_get_target_data((target_ulong)curr_addr);
+                        if (!shadow_pd) {
+                            assert(0);
+                            break;
+                        }
+                        uintptr_t shadow_addr = curr_addr + shadow_pd->access_off;
+                        if (pread(fd, (void *)(shadow_addr),
+                                    TARGET_PAGE_SIZE, offset) == -1) {
+                            goto fail;
+                        }
+                        offset += TARGET_PAGE_SIZE;
+                        tmp_start += TARGET_PAGE_SIZE;
+                    }
+                    if (tmp_start == tmp_end) {
                         goto the_end;
                     }
-                    tmp_start = HOST_PAGE_ALIGN(start);
                 }
             }
+
             if (tmp_end < real_end) {
                 if (hostpage_exist_shadow_page(tmp_end)) {
+                    uint64_t curr_offset = offset +
+                        (tmp_end & qemu_host_page_mask) - tmp_start;
+                    for (abi_ulong curr_addr = tmp_end & qemu_host_page_mask;
+                            curr_addr < tmp_end;
+                            curr_addr += TARGET_PAGE_SIZE) {
+                        ShadowPageDesc *shadow_pd
+                            = page_get_target_data((target_ulong)curr_addr);
+                        if (!shadow_pd) {
+                            assert(0);
+                            break;
+                        }
+                        uintptr_t shadow_addr = curr_addr + shadow_pd->access_off;
+                        if (pread(fd, (void *)(shadow_addr),
+                                    TARGET_PAGE_SIZE, curr_offset) == -1) {
+                            goto fail;
+                        }
+                        curr_offset += TARGET_PAGE_SIZE;
+                    }
                     tmp_end = tmp_end & qemu_host_page_mask;
                 }
             }
 
             if (tmp_start < tmp_end) {
+#ifdef CONFIG_LATX_DEBUG
+                for (abi_ulong curr_addr = tmp_start; curr_addr < tmp_end;
+                        curr_addr += qemu_host_page_size) {
+                    if (page_get_target_data(curr_addr)) {
+                        fprintf(stderr, "Shadow page maybe cause error\n");
+                    }
+                }
+#endif
                 len = tmp_end - tmp_start;
-                offset += tmp_start - start;
-                if (pread(fd, g2h_untagged(tmp_start), len, offset) == -1)
+                if (pread(fd, g2h_untagged(tmp_start), len, offset) == -1) {
                     goto fail;
+                }
                 if (!(host_prot & PROT_WRITE)) {
                     ret = target_mprotect(tmp_start, len, target_prot);
                     assert(ret == 0);
