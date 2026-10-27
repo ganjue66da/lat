@@ -43,6 +43,15 @@ foreach arch : ['x86_64', 'i386']
       ],
       'timeout': 30,
     }, {
+      'name': 'test-empty-cmdline-fds-' + arch,
+      'runner': find_program('../../test-empty-cmdline-fds.sh'),
+      'args': [
+        emulators['latx-' + arch],
+        files('../../empty-cmdline-fds.c'),
+        arch,
+      ],
+      'timeout': 30,
+    }, {
       'name': 'test-fd-conversion-scope-' + arch,
       'runner': find_program('../../test-fd-conversion-scope.sh'),
       'args': [
